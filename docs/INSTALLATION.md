@@ -4,9 +4,9 @@ This guide will help you install and set up Wagtail Context Search.
 
 ## Prerequisites
 
-- Python 3.8 or higher
+- Python 3.10 or higher
 - Django 4.2 or higher
-- Wagtail 5.0 or higher
+- Wagtail 7.0 or higher
 - A Wagtail site already set up
 
 ## Step 1: Install the Package

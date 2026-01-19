@@ -16,7 +16,6 @@ class IndexedPage(models.Model):
         related_name="rag_index",
         primary_key=True,
     )
-    page_id = models.PositiveIntegerField(db_index=True)
     page_type = models.CharField(max_length=255)
     title = models.CharField(max_length=255)
     url = models.URLField()
@@ -30,6 +29,11 @@ class IndexedPage(models.Model):
         indexes = [
             models.Index(fields=["is_active", "last_modified"]),
         ]
+
+    @property
+    def page_id(self):
+        """Return the page ID (same as page.pk since page is the primary key)."""
+        return self.page.pk
 
     def __str__(self):
         return f"{self.title} ({self.page_id})"

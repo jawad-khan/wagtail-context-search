@@ -1,6 +1,6 @@
 # Core dependencies
 Django>=4.2,<5.0
-Wagtail>=5.0,<6.0
+Wagtail>=7.0,<8.0
 
 # LLM backends (optional - install as needed)
 # openai>=1.0.0  # For OpenAI backend

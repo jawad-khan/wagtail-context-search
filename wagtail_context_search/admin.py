@@ -3,8 +3,6 @@ Wagtail admin interface for configuration.
 """
 
 from django.contrib import admin
-from wagtail.contrib.settings.models import BaseSetting
-from wagtail.contrib.settings.registry import register_setting
 
 from wagtail_context_search.models import ChunkMetadata, IndexedPage
 

@@ -149,7 +149,6 @@ class Command(BaseCommand):
             indexed_page, created = IndexedPage.objects.update_or_create(
                 page=page,
                 defaults={
-                    "page_id": page.pk,
                     "page_type": page.__class__.__name__,
                     "title": page.title,
                     "url": page.get_full_url() if hasattr(page, "get_full_url") else "",

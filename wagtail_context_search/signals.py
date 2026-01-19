@@ -68,7 +68,6 @@ def index_page_on_publish(sender, instance, **kwargs):
             indexed_page, created = IndexedPage.objects.update_or_create(
                 page=instance,
                 defaults={
-                    "page_id": instance.pk,
                     "page_type": instance.__class__.__name__,
                     "title": instance.title,
                     "url": instance.get_full_url() if hasattr(instance, "get_full_url") else "",

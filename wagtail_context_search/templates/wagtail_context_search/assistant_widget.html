@@ -3,7 +3,7 @@
 {% if config.ASSISTANT_ENABLED %}
 <script>
     window.ragAssistantConfig = {
-        apiUrl: '{% url "wagtail_context_search:query" %}',
+        apiUrl: '{{ api_url|default:"/rag/query/" }}',
         mode: '{{ config.ASSISTANT_UI_MODE|default:"both" }}',
         position: '{{ config.ASSISTANT_POSITION|default:"bottom-right" }}',
         theme: '{{ config.ASSISTANT_THEME|default:"light" }}',
@@ -11,4 +11,6 @@
 </script>
 <link rel="stylesheet" href="{% static 'wagtail_context_search/css/assistant.css' %}">
 <script src="{% static 'wagtail_context_search/js/assistant.js' %}"></script>
+{% else %}
+<!-- Wagtail Context Search: Assistant is disabled in settings -->
 {% endif %}

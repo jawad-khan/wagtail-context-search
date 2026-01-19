@@ -8,4 +8,5 @@ Generation (RAG) to answer questions about your Wagtail site content.
 __version__ = "0.1.0"
 __author__ = "Wagtail Context Search Contributors"
 
-default_app_config = "wagtail_context_search.apps.WagtailContextSearchConfig"
+# Note: default_app_config is deprecated in Django 3.2+
+# The app config is automatically discovered via apps.py

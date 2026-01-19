@@ -131,9 +131,9 @@ See [CONFIGURATION.md](docs/CONFIGURATION.md) for detailed configuration options
 
 ## Requirements
 
-- Python 3.8+
+- Python 3.10+
 - Django 4.2+
-- Wagtail 5.0+
+- Wagtail 7.0+
 
 ## License
 

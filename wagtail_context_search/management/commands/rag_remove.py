@@ -60,7 +60,7 @@ class Command(BaseCommand):
         elif page_id:
             # Remove specific page
             try:
-                indexed_page = IndexedPage.objects.get(page_id=page_id)
+                indexed_page = IndexedPage.objects.get(page__pk=page_id)
                 
                 # Get chunk IDs
                 chunk_ids = [

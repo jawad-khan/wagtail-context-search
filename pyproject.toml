@@ -7,7 +7,7 @@ name = "wagtail-context-search"
 version = "0.1.0"
 description = "A RAG-based site search plugin for Wagtail"
 readme = "README.md"
-requires-python = ">=3.8"
+requires-python = ">=3.10"
 license = {text = "MIT"}
 authors = [
     {name = "Wagtail Context Search Contributors"}
@@ -18,16 +18,15 @@ classifiers = [
     "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.8",
-    "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
     "Framework :: Django",
     "Framework :: Wagtail",
 ]
 dependencies = [
     "Django>=4.2,<5.0",
-    "Wagtail>=5.0,<6.0",
+    "Wagtail>=7.0,<8.0",
 ]
 
 [project.optional-dependencies]
@@ -56,7 +55,7 @@ wagtail_context_search = [
 
 [tool.black]
 line-length = 88
-target-version = ['py38']
+target-version = ['py310']
 
 [tool.pytest.ini_options]
 DJANGO_SETTINGS_MODULE = "tests.settings"
