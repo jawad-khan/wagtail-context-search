@@ -1,0 +1,22 @@
+# Core dependencies
+Django>=4.2,<5.0
+Wagtail>=5.0,<6.0
+
+# LLM backends (optional - install as needed)
+# openai>=1.0.0  # For OpenAI backend
+# anthropic>=0.18.0  # For Anthropic backend
+# requests>=2.31.0  # For Ollama backend
+
+# Embedding backends (optional - install as needed)
+# sentence-transformers>=2.2.0  # For Sentence Transformers backend
+
+# Vector database backends (optional - install as needed)
+# chromadb>=0.4.0  # For ChromaDB backend
+# psycopg2-binary>=2.9.0  # For PostgreSQL/pgvector backend
+# qdrant-client>=1.6.0  # For Qdrant backend
+
+# Development dependencies
+# pytest>=7.0.0
+# pytest-django>=4.5.0
+# black>=23.0.0
+# flake8>=6.0.0

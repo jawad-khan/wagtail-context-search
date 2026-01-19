@@ -1,0 +1,65 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "wagtail-context-search"
+version = "0.1.0"
+description = "A RAG-based site search plugin for Wagtail"
+readme = "README.md"
+requires-python = ">=3.8"
+license = {text = "MIT"}
+authors = [
+    {name = "Wagtail Context Search Contributors"}
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Framework :: Django",
+    "Framework :: Wagtail",
+]
+dependencies = [
+    "Django>=4.2,<5.0",
+    "Wagtail>=5.0,<6.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0.0",
+    "pytest-django>=4.5.0",
+    "black>=23.0.0",
+    "flake8>=6.0.0",
+]
+openai = ["openai>=1.0.0"]
+anthropic = ["anthropic>=0.18.0"]
+ollama = ["requests>=2.31.0"]
+sentence-transformers = ["sentence-transformers>=2.2.0"]
+chroma = ["chromadb>=0.4.0"]
+pgvector = ["psycopg2-binary>=2.9.0"]
+qdrant = ["qdrant-client>=1.6.0"]
+
+[tool.setuptools]
+packages = ["wagtail_context_search"]
+
+[tool.setuptools.package-data]
+wagtail_context_search = [
+    "static/**/*",
+    "templates/**/*",
+]
+
+[tool.black]
+line-length = 88
+target-version = ['py38']
+
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "tests.settings"
+python_files = "test_*.py"
+python_classes = "Test*"
+python_functions = "test_*"
