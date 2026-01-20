@@ -143,7 +143,13 @@ class Command(BaseCommand):
                 })
 
             # Add to vector DB
-            retrieval.add_documents(documents)
+            try:
+                retrieval.add_documents(documents)
+            except Exception as e:
+                self.stdout.write(
+                    self.style.ERROR(f"Failed to add documents to vector DB for page {page.pk}: {str(e)}")
+                )
+                raise
 
             # Update or create IndexedPage
             indexed_page, created = IndexedPage.objects.update_or_create(

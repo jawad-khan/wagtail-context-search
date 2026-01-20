@@ -20,10 +20,22 @@ class RAGGenerator:
             config: Configuration dict (uses default if None)
         """
         self.config = config or get_config()
-        self.llm = get_llm_backend(
-            self.config.get("LLM_BACKEND", "openai"),
-            self.config,
-        )
+        try:
+            self.llm = get_llm_backend(
+                self.config.get("LLM_BACKEND", "openai"),
+                self.config,
+            )
+            # Check if backend is available
+            if not self.llm.is_available():
+                import logging
+                logger = logging.getLogger(__name__)
+                backend_name = self.config.get("LLM_BACKEND", "openai")
+                logger.warning(f"LLM backend '{backend_name}' is not available. Check configuration.")
+        except Exception as e:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"Failed to initialize LLM backend: {str(e)}")
+            raise
         
         # Get prompt template
         template = self.config.get("PROMPT_TEMPLATE")

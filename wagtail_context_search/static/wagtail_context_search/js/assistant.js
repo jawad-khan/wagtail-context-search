@@ -158,11 +158,28 @@
             this.setLoading(true);
 
             try {
+                // Get CSRF token from cookies if available
+                const getCookie = (name) => {
+                    const value = `; ${document.cookie}`;
+                    const parts = value.split(`; ${name}=`);
+                    if (parts.length === 2) return parts.pop().split(';').shift();
+                    return null;
+                };
+                
+                const csrftoken = getCookie('csrftoken');
+                const headers = {
+                    'Content-Type': 'application/json',
+                };
+                
+                // Add CSRF token if available (though view should be exempt)
+                if (csrftoken) {
+                    headers['X-CSRFToken'] = csrftoken;
+                }
+                
                 const response = await fetch(this.apiUrl, {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
+                    headers: headers,
+                    credentials: 'same-origin',
                     body: JSON.stringify({
                         query: query,
                         stream: false,

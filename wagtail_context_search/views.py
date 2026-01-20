@@ -17,8 +17,8 @@ from wagtail_context_search.settings import get_config
 logger = logging.getLogger(__name__)
 
 
-@csrf_exempt
 @require_http_methods(["POST"])
+@csrf_exempt
 def query_view(request):
     """
     Handle RAG query requests.
@@ -52,9 +52,29 @@ def query_view(request):
         # Retrieve relevant documents
         retrieval = RAGRetrieval(config)
         documents = retrieval.retrieve(query)
+        
+        # Log for debugging
+        logger.debug(f"Retrieved {len(documents)} documents for query: {query}")
+        if not documents:
+            logger.warning(f"No documents found for query: {query}. Vector DB may be empty.")
 
         # Generate answer
-        generator = RAGGenerator(config)
+        try:
+            generator = RAGGenerator(config)
+            # Check if LLM is available
+            if not generator.llm.is_available():
+                return JsonResponse({
+                    "error": f"LLM backend '{config.get('LLM_BACKEND', 'openai')}' is not available. Please check your configuration and ensure the service is running.",
+                    "answer": None,
+                    "sources": [],
+                }, status=503)
+        except Exception as e:
+            logger.exception("Failed to initialize LLM generator")
+            return JsonResponse({
+                "error": f"Failed to initialize LLM: {str(e)}. Please check your LLM backend configuration.",
+                "answer": None,
+                "sources": [],
+            }, status=500)
 
         if stream:
             # Streaming response
@@ -109,11 +129,29 @@ def health_view(request):
         vector_db_available = retrieval.vector_db.is_available()
         llm_available = generator.llm.is_available()
         
+        # Check vector DB stats
+        vector_db_stats = {}
+        indexed_count = 0
+        try:
+            vector_db_stats = retrieval.vector_db.get_stats()
+            indexed_count = vector_db_stats.get("document_count", 0)
+        except Exception:
+            pass
+        
+        # Check database for indexed pages
+        try:
+            from wagtail_context_search.models import IndexedPage
+            db_indexed_count = IndexedPage.objects.filter(is_active=True).count()
+        except Exception:
+            db_indexed_count = 0
+        
         status = {
             "status": "ok" if all([embedder_available, vector_db_available, llm_available]) else "degraded",
             "embedder": "available" if embedder_available else "unavailable",
             "vector_db": "available" if vector_db_available else "unavailable",
             "llm": "available" if llm_available else "unavailable",
+            "indexed_documents": indexed_count,
+            "db_indexed_pages": db_indexed_count,
         }
         
         status_code = 200 if status["status"] == "ok" else 503

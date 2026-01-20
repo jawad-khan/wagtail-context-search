@@ -65,12 +65,38 @@ class RAGRetrieval:
         if not documents:
             return
 
-        # Generate embeddings
-        texts = [doc["text"] for doc in documents]
-        embeddings = self.embedder.embed_batch(texts)
+        try:
+            # Generate embeddings
+            texts = [doc["text"] for doc in documents]
+            
+            if not texts:
+                raise ValueError("No texts to embed")
+            
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.debug(f"Generating embeddings for {len(texts)} documents")
+            
+            embeddings = self.embedder.embed_batch(texts)
+            
+            if not embeddings:
+                raise ValueError("No embeddings generated")
+            
+            if len(embeddings) != len(documents):
+                raise ValueError(f"Embedding count ({len(embeddings)}) doesn't match document count ({len(documents)})")
+            
+            logger.debug(f"Generated {len(embeddings)} embeddings, dimension: {len(embeddings[0]) if embeddings else 0}")
 
-        # Add to vector DB
-        self.vector_db.add_documents(documents, embeddings)
+            # Add to vector DB
+            logger.debug(f"Adding {len(documents)} documents to vector DB")
+            self.vector_db.add_documents(documents, embeddings)
+            logger.debug("Successfully added documents to vector DB")
+        except Exception as e:
+            import logging
+            import traceback
+            logger = logging.getLogger(__name__)
+            logger.error(f"Failed to add documents to vector DB: {str(e)}")
+            logger.error(traceback.format_exc())
+            raise
 
     def delete_documents(self, document_ids: List[str]) -> None:
         """

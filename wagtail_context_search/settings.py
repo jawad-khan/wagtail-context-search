@@ -54,7 +54,7 @@ DEFAULT_CONFIG = {
         },
         "ollama": {
             "base_url": "http://localhost:11434",
-            "model": "llama2",
+            "model": "llama3.2:latest",
         },
         "sentence_transformers": {
             "model_name": "all-MiniLM-L6-v2",
