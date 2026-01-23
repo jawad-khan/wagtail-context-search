@@ -7,7 +7,8 @@ A powerful RAG (Retrieval-Augmented Generation) based site search plugin for Wag
 - 🤖 **AI-Powered Search**: Uses RAG to provide intelligent answers based on your site content
 - 🔌 **Pluggable Backends**: Choose your LLM, embedding model, and vector database
 - 🔄 **Auto-Indexing**: Automatically indexes pages when published/unpublished
-- 💬 **Chat Interface**: Beautiful chat widget that appears on every page
+- 💬 **Chat Interface**: Beautiful chat widget that appears automatically on every page
+- 🚀 **Zero Configuration**: No template or URL changes needed - just add middleware
 - 📊 **Management Commands**: Easy commands to index, sync, and manage content
 - 🎨 **Customizable**: Theme, position, and UI mode options
 
@@ -48,10 +49,12 @@ INSTALLED_APPS = [
 python manage.py migrate
 ```
 
-4. Include the assistant widget in your base template:
-```html
-{% load rag_assistant %}
-{% rag_assistant %}
+4. Add the middleware to automatically inject the widget:
+```python
+MIDDLEWARE = [
+    # ... your existing middleware ...
+    'wagtail_context_search.middleware.RAGAssistantMiddleware',
+]
 ```
 
 5. Configure your settings (see [Configuration](docs/CONFIGURATION.md))
@@ -60,6 +63,8 @@ python manage.py migrate
 ```bash
 python manage.py rag_index
 ```
+
+**That's it!** The assistant widget will automatically appear on all pages (if `ASSISTANT_ENABLED: True` in settings). No need to edit templates or URLs!
 
 ## Quick Start
 

@@ -2,6 +2,24 @@
 
 Complete reference for configuring Wagtail Context Search.
 
+## Quick Setup
+
+**Minimal configuration (automatic widget injection):**
+
+1. Add middleware to `MIDDLEWARE`:
+   ```python
+   MIDDLEWARE = [
+       # ... your existing middleware ...
+       'wagtail_context_search.middleware.RAGAssistantMiddleware',
+   ]
+   ```
+
+2. Configure `WAGTAIL_CONTEXT_SEARCH` in settings (see below)
+
+3. That's it! The widget appears automatically on all pages (if `ASSISTANT_ENABLED: True`)
+
+**No template or URL changes needed!**
+
 ## Basic Configuration
 
 Add `WAGTAIL_CONTEXT_SEARCH` to your `settings.py`:
@@ -190,12 +208,14 @@ WAGTAIL_CONTEXT_SEARCH = {
 
 ```python
 WAGTAIL_CONTEXT_SEARCH = {
-    "ASSISTANT_ENABLED": True,
+    "ASSISTANT_ENABLED": True,  # Enable/disable the widget (middleware respects this)
     "ASSISTANT_POSITION": "bottom-right",  # bottom-right, bottom-left
     "ASSISTANT_THEME": "light",  # light, dark
     "ASSISTANT_UI_MODE": "both",  # chat, search, both
 }
 ```
+
+**Note:** When `ASSISTANT_ENABLED: False`, the widget will not appear on pages, but the API endpoints (`/rag/query/`, `/rag/health/`) will still work for programmatic access.
 
 ## Page Type Filtering
 
@@ -238,11 +258,39 @@ WAGTAIL_CONTEXT_SEARCH = {
 }
 ```
 
+## Middleware Configuration
+
+The middleware automatically handles widget injection and API endpoints. Just add it to your `MIDDLEWARE`:
+
+```python
+MIDDLEWARE = [
+    # ... your existing middleware ...
+    'wagtail_context_search.middleware.RAGAssistantMiddleware',
+]
+```
+
+**What the middleware does:**
+- Automatically injects the widget into all HTML pages (if `ASSISTANT_ENABLED: True`)
+- Handles `/rag/query/` and `/rag/health/` API endpoints automatically
+- Skips admin pages, API endpoints, and `/rag/` paths to avoid conflicts
+- Respects `ASSISTANT_ENABLED` setting to show/hide the widget
+
+**No template or URL changes needed!**
+
 ## Complete Example
 
 ```python
 import os
 
+# In settings.py
+
+# Add middleware
+MIDDLEWARE = [
+    # ... your existing middleware ...
+    'wagtail_context_search.middleware.RAGAssistantMiddleware',
+]
+
+# Configure the plugin
 WAGTAIL_CONTEXT_SEARCH = {
     # LLM Configuration
     "LLM_BACKEND": "openai",
@@ -265,7 +313,7 @@ WAGTAIL_CONTEXT_SEARCH = {
     "CHUNK_OVERLAP": 50,
     
     # Assistant UI Configuration
-    "ASSISTANT_ENABLED": True,
+    "ASSISTANT_ENABLED": True,  # Widget appears automatically
     "ASSISTANT_POSITION": "bottom-right",
     "ASSISTANT_THEME": "light",
     "ASSISTANT_UI_MODE": "both",
@@ -293,6 +341,7 @@ Recommended: Use environment variables for sensitive data:
 export OPENAI_API_KEY="sk-..."
 export ANTHROPIC_API_KEY="sk-ant-..."
 export QDRANT_API_KEY="..."
+export MEILISEARCH_API_KEY="..."  # If using Meilisearch
 ```
 
 Then reference in settings:
@@ -306,6 +355,16 @@ Then reference in settings:
 ```
 
 ## Troubleshooting Configuration
+
+### Widget Not Appearing
+
+If the widget doesn't appear:
+
+1. **Check middleware is added**: Ensure `'wagtail_context_search.middleware.RAGAssistantMiddleware'` is in your `MIDDLEWARE` list
+2. **Check `ASSISTANT_ENABLED`**: Verify it's set to `True` in your configuration
+3. **Check static files**: Run `python manage.py collectstatic` to ensure CSS/JS files are available
+4. **Check browser console**: Look for JavaScript errors
+5. **Verify page structure**: The middleware requires a `</body>` tag in your HTML
 
 ### Settings Not Loading from `local.py` or Custom Settings Files
 

@@ -4,7 +4,9 @@ How to use Wagtail Context Search in your Wagtail site.
 
 ## Basic Usage
 
-Once installed and configured, the assistant widget will automatically appear on every page of your site (if enabled in settings).
+Once installed and configured (with the middleware added), the assistant widget will automatically appear on every page of your site (if `ASSISTANT_ENABLED: True` in settings).
+
+**No template changes needed!** The middleware automatically injects the widget into all HTML pages.
 
 ### Asking Questions
 

@@ -78,18 +78,26 @@ INSTALLED_APPS = [
 ]
 ```
 
-## Step 4: Configure URLs
+## Step 4: Add Middleware (Automatic Widget Injection)
 
-Add the RAG assistant URLs to your main `urls.py`:
+Add the middleware to automatically inject the widget and handle API endpoints:
 
 ```python
-from django.urls import include, path
-
-urlpatterns = [
-    # ... other URL patterns
-    path('rag/', include('wagtail_context_search.urls')),
+MIDDLEWARE = [
+    # ... your existing middleware ...
+    'wagtail_context_search.middleware.RAGAssistantMiddleware',
 ]
 ```
+
+**This middleware automatically:**
+- Injects the assistant widget into all HTML pages (if `ASSISTANT_ENABLED: True`)
+- Handles `/rag/query/` and `/rag/health/` API endpoints (no URL configuration needed)
+- Respects the `ASSISTANT_ENABLED` setting to show/hide the widget
+
+**No need to:**
+- Edit `base.html` or any templates
+- Add URLs to `urls.py`
+- Add template tags
 
 ## Step 5: Run Migrations
 
@@ -129,30 +137,35 @@ export OPENAI_API_KEY="your-api-key-here"
 export ANTHROPIC_API_KEY="your-api-key-here"
 ```
 
-## Step 8: Include Widget in Templates
+## Step 8: Enable the Assistant (Optional)
 
-Add the assistant widget to your base template (usually `base.html`):
+The assistant widget is enabled by default. To control it, set `ASSISTANT_ENABLED` in your settings:
 
-```html
-{% load rag_assistant %}
-{% rag_assistant %}
+```python
+WAGTAIL_CONTEXT_SEARCH = {
+    # ... other settings ...
+    "ASSISTANT_ENABLED": True,  # Widget appears automatically on all pages
+    # or
+    "ASSISTANT_ENABLED": False,  # Widget is hidden (API still works)
+}
 ```
 
-Or include it manually:
+**Note:** The widget is automatically injected by the middleware. You don't need to add any template tags or edit your templates.
 
-```html
-{% load static %}
-<script>
-    window.ragAssistantConfig = {
-        apiUrl: '{% url "wagtail_context_search:query" %}',
-        mode: 'both',
-        position: 'bottom-right',
-        theme: 'light',
-    };
-</script>
-<link rel="stylesheet" href="{% static 'wagtail_context_search/css/assistant.css' %}">
-<script src="{% static 'wagtail_context_search/js/assistant.js' %}"></script>
-```
+### Alternative: Manual Template Inclusion (Optional)
+
+If you prefer to manually include the widget in your templates instead of using middleware:
+
+1. Remove the middleware from `MIDDLEWARE`
+2. Add URLs to your `urls.py`:
+   ```python
+   path('rag/', include('wagtail_context_search.urls')),
+   ```
+3. Add the template tag to your base template:
+   ```html
+   {% load rag_assistant %}
+   {% rag_assistant %}
+   ```
 
 ## Step 9: Index Your Content
 
@@ -173,9 +186,11 @@ This will index all live pages. For more options, see [USAGE.md](USAGE.md).
 ## Troubleshooting
 
 ### Widget doesn't appear
+- Check that the middleware is added to `MIDDLEWARE` in settings.py
+- Verify `ASSISTANT_ENABLED: True` in your configuration
 - Check that static files are collected: `python manage.py collectstatic`
-- Verify the template tag is included in your base template
 - Check browser console for JavaScript errors
+- Verify the page has a `</body>` tag (required for automatic injection)
 
 ### Backend not available
 - Verify the backend package is installed
