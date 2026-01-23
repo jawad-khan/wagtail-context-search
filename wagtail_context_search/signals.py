@@ -3,6 +3,7 @@ Wagtail signals for automatic indexing when pages are published/unpublished.
 """
 
 from django.db import transaction
+from django.utils import timezone
 from wagtail.models import Page
 from wagtail.signals import page_published, page_unpublished
 
@@ -10,7 +11,7 @@ from wagtail_context_search.core.chunker import Chunker
 from wagtail_context_search.core.retrieval import RAGRetrieval
 from wagtail_context_search.models import ChunkMetadata, IndexedPage
 from wagtail_context_search.settings import get_config
-from wagtail_context_search.utils import extract_page_content
+from wagtail_context_search.utils import extract_page_content, get_page_url
 
 
 def index_page_on_publish(sender, instance, **kwargs):
@@ -35,6 +36,9 @@ def index_page_on_publish(sender, instance, **kwargs):
             if not content:
                 return
 
+            # Get page URL safely
+            page_url = get_page_url(instance)
+
             # Chunk content
             chunks = chunker.chunk_text(content)
 
@@ -51,7 +55,7 @@ def index_page_on_publish(sender, instance, **kwargs):
                         "page_id": instance.pk,
                         "page_type": instance.__class__.__name__,
                         "title": instance.title,
-                        "url": instance.get_full_url() if hasattr(instance, "get_full_url") else "",
+                        "url": page_url,
                         "chunk_index": i,
                     },
                 })
@@ -64,14 +68,21 @@ def index_page_on_publish(sender, instance, **kwargs):
             # Add to vector DB
             retrieval.add_documents(documents)
 
+            # Get last modified time with fallback
+            last_modified = (
+                instance.last_published_at 
+                or instance.latest_revision_created_at 
+                or timezone.now()
+            )
+
             # Update or create IndexedPage
             indexed_page, created = IndexedPage.objects.update_or_create(
                 page=instance,
                 defaults={
                     "page_type": instance.__class__.__name__,
                     "title": instance.title,
-                    "url": instance.get_full_url() if hasattr(instance, "get_full_url") else "",
-                    "last_modified": instance.last_published_at or instance.latest_revision_created_at,
+                    "url": page_url,
+                    "last_modified": last_modified,
                     "chunk_count": len(chunks),
                     "is_active": True,
                 },

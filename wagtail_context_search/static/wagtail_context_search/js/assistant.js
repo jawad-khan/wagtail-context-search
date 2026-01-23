@@ -202,13 +202,73 @@
             }
         }
 
+        linkify(text) {
+            // Convert URLs to clickable links
+            // Match http:// or https:// followed by valid URL characters
+            // Pattern: http:// or https://, then domain (including localhost/127.0.0.1), port, path
+            const urlRegex = /(https?:\/\/[^\s<>&"']+(?:\/[^\s<>&"']*)?)/gi;
+            return text.replace(urlRegex, (match) => {
+                // Remove trailing punctuation that might not be part of the URL
+                let cleanUrl = match.trim();
+                // Remove trailing punctuation
+                const punctuationMatch = cleanUrl.match(/^(.+?)([.,;:!?)]+)$/);
+                if (punctuationMatch) {
+                    cleanUrl = punctuationMatch[1];
+                    const punctuation = punctuationMatch[2];
+                    // Escape the URL for HTML attribute
+                    const escapedUrl = cleanUrl.replace(/"/g, '&quot;').replace(/'/g, '&#x27;');
+                    return `<a href="${escapedUrl}" target="_blank" rel="noopener noreferrer">${cleanUrl}</a>${punctuation}`;
+                } else {
+                    // No trailing punctuation
+                    const escapedUrl = cleanUrl.replace(/"/g, '&quot;').replace(/'/g, '&#x27;');
+                    return `<a href="${escapedUrl}" target="_blank" rel="noopener noreferrer">${cleanUrl}</a>`;
+                }
+            });
+        }
+
+        escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
         addMessage(type, content, sources = null) {
             const messageDiv = document.createElement('div');
             messageDiv.className = `rag-assistant-message rag-assistant-message-${type}`;
 
             const bubble = document.createElement('div');
             bubble.className = 'rag-assistant-message-bubble';
-            bubble.textContent = content;
+            
+            // For assistant messages, convert URLs to links; for user messages, escape HTML
+            if (type === 'assistant') {
+                // Use a placeholder approach: replace URLs with placeholders, escape HTML, then restore links
+                const urlPlaceholders = [];
+                let placeholderIndex = 0;
+                
+                // First pass: replace URLs with placeholders
+                let processed = content.replace(/(https?:\/\/[^\s<>&"']+(?:\/[^\s<>&"']*)?)/gi, (url) => {
+                    const placeholder = `__URL_PLACEHOLDER_${placeholderIndex}__`;
+                    urlPlaceholders.push(url.trim().replace(/[.,;:!?)]+$/, ''));
+                    placeholderIndex++;
+                    return placeholder;
+                });
+                
+                // Escape HTML
+                processed = this.escapeHtml(processed);
+                
+                // Restore URLs as clickable links
+                urlPlaceholders.forEach((url, index) => {
+                    const placeholder = `__URL_PLACEHOLDER_${index}__`;
+                    const escapedUrl = url.replace(/"/g, '&quot;').replace(/'/g, '&#x27;');
+                    const link = `<a href="${escapedUrl}" target="_blank" rel="noopener noreferrer">${url}</a>`;
+                    processed = processed.replace(placeholder, link);
+                });
+                
+                bubble.innerHTML = processed;
+            } else {
+                bubble.textContent = content;
+            }
+            
             messageDiv.appendChild(bubble);
 
             // Add sources if available
@@ -217,9 +277,9 @@
                 sourcesDiv.className = 'rag-assistant-sources';
                 sourcesDiv.innerHTML = 'Sources: ' + sources.map(s => {
                     if (s.url) {
-                        return `<a href="${s.url}" target="_blank">${s.title}</a>`;
+                        return `<a href="${s.url}" target="_blank" rel="noopener noreferrer">${s.title}</a>`;
                     }
-                    return s.title;
+                    return this.escapeHtml(s.title);
                 }).join(', ');
                 messageDiv.appendChild(sourcesDiv);
             }

@@ -63,6 +63,10 @@ DEFAULT_CONFIG = {
         "chroma": {
             "persist_directory": None,  # None = in-memory
         },
+        "meilisearch": {
+            "url": "http://localhost:7700",
+            "api_key": None,
+        },
         "pgvector": {
             "connection_string": None,  # Uses Django DB if None
         },
@@ -79,14 +83,57 @@ def get_config():
     user_config = getattr(settings, "WAGTAIL_CONTEXT_SEARCH", {})
     config = DEFAULT_CONFIG.copy()
     
-    # Deep merge backend settings
+    # Deep merge backend settings - ensure nested dicts are merged correctly
     if "BACKEND_SETTINGS" in user_config:
-        config["BACKEND_SETTINGS"] = {
-            **config["BACKEND_SETTINGS"],
-            **user_config["BACKEND_SETTINGS"],
-        }
-        del user_config["BACKEND_SETTINGS"]
+        # Start with default backend settings
+        merged_backend_settings = config["BACKEND_SETTINGS"].copy()
+        # Merge user backend settings, ensuring nested dicts are merged
+        for backend_name, backend_config in user_config["BACKEND_SETTINGS"].items():
+            if backend_name in merged_backend_settings:
+                # Merge nested dict if both exist
+                if isinstance(merged_backend_settings[backend_name], dict) and isinstance(backend_config, dict):
+                    merged_backend_settings[backend_name] = {
+                        **merged_backend_settings[backend_name],
+                        **backend_config,
+                    }
+                else:
+                    # Replace if not both dicts
+                    merged_backend_settings[backend_name] = backend_config
+            else:
+                # New backend setting
+                merged_backend_settings[backend_name] = backend_config
+        config["BACKEND_SETTINGS"] = merged_backend_settings
+        # Remove from user_config so it doesn't override
+        user_config = {k: v for k, v in user_config.items() if k != "BACKEND_SETTINGS"}
     
     # Merge remaining settings
     config.update(user_config)
     return config
+
+
+def debug_config():
+    """Debug helper to print current configuration (without sensitive data)."""
+    import logging
+    logger = logging.getLogger(__name__)
+    
+    user_config = getattr(settings, "WAGTAIL_CONTEXT_SEARCH", {})
+    config = get_config()
+    
+    logger.info("=== Wagtail Context Search Configuration Debug ===")
+    logger.info(f"User config present: {bool(user_config)}")
+    logger.info(f"LLM Backend: {config.get('LLM_BACKEND')}")
+    logger.info(f"Embedder Backend: {config.get('EMBEDDER_BACKEND')}")
+    logger.info(f"Vector DB Backend: {config.get('VECTOR_DB_BACKEND')}")
+    
+    # Check backend settings (mask API keys)
+    backend_settings = config.get("BACKEND_SETTINGS", {})
+    for backend_name, backend_config in backend_settings.items():
+        if isinstance(backend_config, dict):
+            api_key = backend_config.get("api_key")
+            if api_key:
+                masked_key = f"{api_key[:4]}...{api_key[-4:]}" if len(api_key) > 8 else "***"
+                logger.info(f"  {backend_name}.api_key: {masked_key} (present)")
+            else:
+                logger.info(f"  {backend_name}.api_key: None (missing)")
+    
+    logger.info("==================================================")

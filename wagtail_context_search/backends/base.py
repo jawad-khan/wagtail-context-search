@@ -114,8 +114,25 @@ class BaseVectorDB(ABC):
         """Initialize the vector DB with configuration."""
         self.config = config
         self.collection_name = config.get("VECTOR_DB_COLLECTION", "wagtail_content")
+        # Extract backend name by looking it up in the registry
+        # This ensures we get the correct key (e.g., "meilisearch" not "meilisearchbackend")
+        try:
+            from wagtail_context_search.backends.vector_db import VECTOR_DB_BACKENDS
+            # Find the backend name by looking up this class in the registry
+            backend_name = None
+            for name, backend_class in VECTOR_DB_BACKENDS.items():
+                if backend_class == self.__class__:
+                    backend_name = name
+                    break
+            # Fallback to class name extraction if not found in registry
+            if backend_name is None:
+                backend_name = self.__class__.__name__.lower().replace("backend", "")
+        except ImportError:
+            # Fallback if registry not available
+            backend_name = self.__class__.__name__.lower().replace("backend", "")
+        
         self.backend_settings = config.get("BACKEND_SETTINGS", {}).get(
-            self.__class__.__name__.lower().replace("vectordb", ""), {}
+            backend_name, {}
         )
 
     @abstractmethod

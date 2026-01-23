@@ -128,6 +128,24 @@
     word-wrap: break-word;
 }
 
+.rag-assistant-message-bubble a {
+    color: inherit;
+    text-decoration: underline;
+    word-break: break-all;
+}
+
+.rag-assistant-message-user .rag-assistant-message-bubble a {
+    color: rgba(255, 255, 255, 0.9);
+}
+
+.rag-assistant-message-assistant .rag-assistant-message-bubble a {
+    color: #667eea;
+}
+
+.rag-assistant-widget.rag-assistant-theme-dark .rag-assistant-message-assistant .rag-assistant-message-bubble a {
+    color: #8b9eff;
+}
+
 .rag-assistant-message-user .rag-assistant-message-bubble {
     background: #667eea;
     color: white;

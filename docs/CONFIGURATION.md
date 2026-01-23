@@ -127,6 +127,21 @@ WAGTAIL_CONTEXT_SEARCH = {
 }
 ```
 
+### Meilisearch
+
+```python
+WAGTAIL_CONTEXT_SEARCH = {
+    "VECTOR_DB_BACKEND": "meilisearch",
+    "VECTOR_DB_COLLECTION": "wagtail_content",
+    "BACKEND_SETTINGS": {
+        "meilisearch": {
+            "url": "http://localhost:7700",
+            "api_key": os.getenv("MEILISEARCH_API_KEY"),  # Optional
+        },
+    },
+}
+```
+
 ### PostgreSQL with pgvector
 
 ```python
@@ -289,6 +304,68 @@ Then reference in settings:
     },
 }
 ```
+
+## Troubleshooting Configuration
+
+### Settings Not Loading from `local.py` or Custom Settings Files
+
+If you're using a Django settings structure with separate files (e.g., `base.py`, `local.py`), ensure that:
+
+1. **Your settings module is correctly configured**: Make sure `DJANGO_SETTINGS_MODULE` points to the correct settings file, or that your main settings file imports from `local.py`:
+
+```python
+# In your main settings.py or base.py
+try:
+    from .local import *
+except ImportError:
+    pass
+```
+
+2. **Configuration is in the right place**: The `WAGTAIL_CONTEXT_SEARCH` dictionary should be in the settings file that Django actually loads.
+
+3. **Check configuration is loaded**: Run the debug command to verify:
+
+```bash
+python manage.py rag_debug
+```
+
+This will show:
+- Whether user configuration is present
+- Which backends are configured
+- Whether API keys are set (masked for security)
+
+4. **Deep merge for nested settings**: The plugin automatically merges `BACKEND_SETTINGS` with defaults. If you only specify:
+
+```python
+WAGTAIL_CONTEXT_SEARCH = {
+    "BACKEND_SETTINGS": {
+        "openai": {
+            "api_key": "sk-...",
+        },
+    },
+}
+```
+
+The plugin will merge this with default settings, so you don't need to specify all backend settings.
+
+### Verifying API Keys Are Loaded
+
+If API keys aren't being picked up:
+
+1. **Check environment variables**: Ensure environment variables are set before Django starts:
+   ```bash
+   export OPENAI_API_KEY="sk-..."
+   python manage.py runserver
+   ```
+
+2. **Check settings file**: Verify the configuration is in the settings file Django loads:
+   ```python
+   # In Django shell
+   from django.conf import settings
+   print(settings.WAGTAIL_CONTEXT_SEARCH)
+   ```
+
+3. **Use debug command**: Run `python manage.py rag_debug` to see the actual configuration being used.
 
 ## Multi-Site Configuration
 

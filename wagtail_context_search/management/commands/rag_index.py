@@ -7,15 +7,18 @@ Usage:
     python manage.py rag_index --rebuild          # Rebuild entire index
 """
 
+import time
 from django.core.management.base import BaseCommand, CommandError
-from django.db import transaction
+from django.db import transaction, OperationalError
+from django.db.utils import DatabaseError
+from django.utils import timezone
 from wagtail.models import Page
 
 from wagtail_context_search.core.chunker import Chunker
 from wagtail_context_search.core.retrieval import RAGRetrieval
 from wagtail_context_search.models import ChunkMetadata, IndexedPage
 from wagtail_context_search.settings import get_config
-from wagtail_context_search.utils import extract_page_content
+from wagtail_context_search.utils import extract_page_content, get_page_url
 
 
 class Command(BaseCommand):
@@ -91,6 +94,8 @@ class Command(BaseCommand):
                     indexed += 1
                     if indexed % 10 == 0:
                         self.stdout.write(f"Indexed {indexed}/{total} pages...")
+                    # Small delay to reduce database lock contention (SQLite)
+                    time.sleep(0.01)
                 except Exception as e:
                     failed += 1
                     self.stdout.write(
@@ -103,71 +108,98 @@ class Command(BaseCommand):
                 )
             )
 
-    def index_page(self, page, retrieval, chunker, config):
-        """Index a single page."""
+    def index_page(self, page, retrieval, chunker, config, max_retries=3):
+        """Index a single page with retry logic for database locks."""
         # Check if this page type should be indexed
         page_types = config.get("PAGE_TYPES", [])
         if page_types and page.__class__.__name__ not in page_types:
             return
 
-        with transaction.atomic():
-            # Extract content
-            content = extract_page_content(page)
-            if not content:
-                return
-
-            # Chunk content
-            chunks = chunker.chunk_text(content)
-
-            # Prepare documents
-            documents = []
-            chunk_metadatas = []
-
-            for i, chunk_text in enumerate(chunks):
-                chunk_id = f"page_{page.pk}_chunk_{i}"
-                documents.append({
-                    "id": chunk_id,
-                    "text": chunk_text,
-                    "metadata": {
-                        "page_id": page.pk,
-                        "page_type": page.__class__.__name__,
-                        "title": page.title,
-                        "url": page.get_full_url() if hasattr(page, "get_full_url") else "",
-                        "chunk_index": i,
-                    },
-                })
-                chunk_metadatas.append({
-                    "chunk_id": chunk_id,
-                    "chunk_index": i,
-                    "text_preview": chunk_text[:500],
-                })
-
-            # Add to vector DB
+        for attempt in range(max_retries):
             try:
-                retrieval.add_documents(documents)
-            except Exception as e:
-                self.stdout.write(
-                    self.style.ERROR(f"Failed to add documents to vector DB for page {page.pk}: {str(e)}")
-                )
-                raise
+                with transaction.atomic():
+                    self._index_page_internal(page, retrieval, chunker, config)
+                # Success - break out of retry loop
+                break
+            except (OperationalError, DatabaseError) as e:
+                if "database is locked" in str(e).lower() and attempt < max_retries - 1:
+                    # Wait with exponential backoff
+                    wait_time = (2 ** attempt) * 0.1  # 0.1s, 0.2s, 0.4s
+                    time.sleep(wait_time)
+                    continue
+                else:
+                    # Re-raise if not a lock error or out of retries
+                    raise
 
-            # Update or create IndexedPage
-            indexed_page, created = IndexedPage.objects.update_or_create(
-                page=page,
-                defaults={
+    def _index_page_internal(self, page, retrieval, chunker, config):
+        """Internal method to index a page (called within transaction)."""
+        # Extract content
+        content = extract_page_content(page)
+        if not content:
+            return
+
+        # Get page URL safely
+        page_url = get_page_url(page)
+
+        # Chunk content
+        chunks = chunker.chunk_text(content)
+
+        # Prepare documents
+        documents = []
+        chunk_metadatas = []
+
+        for i, chunk_text in enumerate(chunks):
+            chunk_id = f"page_{page.pk}_chunk_{i}"
+            documents.append({
+                "id": chunk_id,
+                "text": chunk_text,
+                "metadata": {
+                    "page_id": page.pk,
                     "page_type": page.__class__.__name__,
                     "title": page.title,
-                    "url": page.get_full_url() if hasattr(page, "get_full_url") else "",
-                    "last_modified": page.last_published_at or page.latest_revision_created_at,
-                    "chunk_count": len(chunks),
-                    "is_active": True,
+                    "url": page_url,
+                    "chunk_index": i,
                 },
-            )
+            })
+            chunk_metadatas.append({
+                "chunk_id": chunk_id,
+                "chunk_index": i,
+                "text_preview": chunk_text[:500],
+            })
 
-            # Delete old chunks and create new ones
-            ChunkMetadata.objects.filter(page=indexed_page).delete()
-            for chunk_meta in chunk_metadatas:
-                ChunkMetadata.objects.create(
-                    page=indexed_page,
-                    **chunk_meta,
-                )
+        # Add to vector DB
+        try:
+            retrieval.add_documents(documents)
+        except Exception as e:
+            self.stdout.write(
+                self.style.ERROR(f"Failed to add documents to vector DB for page {page.pk}: {str(e)}")
+            )
+            raise
+
+        # Get last modified time with fallback
+        last_modified = (
+            page.last_published_at 
+            or page.latest_revision_created_at 
+            or timezone.now()
+        )
+
+        # Update or create IndexedPage
+        indexed_page, created = IndexedPage.objects.update_or_create(
+            page=page,
+            defaults={
+                "page_type": page.__class__.__name__,
+                "title": page.title,
+                "url": page_url,
+                "last_modified": last_modified,
+                "chunk_count": len(chunks),
+                "is_active": True,
+            },
+        )
+
+        # Delete old chunks and create new ones
+        ChunkMetadata.objects.filter(page=indexed_page).delete()
+        for chunk_meta in chunk_metadatas:
+            ChunkMetadata.objects.create(
+                page=indexed_page,
+                **chunk_meta,
+            )

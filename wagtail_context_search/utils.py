@@ -9,6 +9,30 @@ from typing import Optional
 from wagtail.models import Page
 
 
+def get_page_url(page: Page) -> str:
+    """
+    Get page URL safely, handling cases where it might not be available.
+    
+    Args:
+        page: Wagtail Page instance
+        
+    Returns:
+        Page URL or empty string if not available
+    """
+    try:
+        if hasattr(page, "get_full_url"):
+            url = page.get_full_url()
+            if url:
+                return url
+        # Fallback: try to construct URL from url_path
+        if hasattr(page, "url_path"):
+            return page.url_path
+        # Last resort: return empty string
+        return ""
+    except Exception:
+        return ""
+
+
 def extract_page_content(page: Page) -> Optional[str]:
     """
     Extract text content from a Wagtail page.

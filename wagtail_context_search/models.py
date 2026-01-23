@@ -18,9 +18,9 @@ class IndexedPage(models.Model):
     )
     page_type = models.CharField(max_length=255)
     title = models.CharField(max_length=255)
-    url = models.URLField()
+    url = models.URLField(blank=True, default="", max_length=500)
     last_indexed = models.DateTimeField(auto_now=True)
-    last_modified = models.DateTimeField()
+    last_modified = models.DateTimeField(null=True, blank=True)
     chunk_count = models.PositiveIntegerField(default=0)
     is_active = models.BooleanField(default=True, db_index=True)
 

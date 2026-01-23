@@ -24,6 +24,7 @@ A powerful RAG (Retrieval-Augmented Generation) based site search plugin for Wag
 
 ### Vector Databases
 - **ChromaDB** (Local, easy setup)
+- **Meilisearch** (Fast full-text search)
 - **PostgreSQL with pgvector**
 - **Qdrant**
 
@@ -93,6 +94,8 @@ python manage.py rag_index
 - [Installation Guide](docs/INSTALLATION.md)
 - [Configuration Reference](docs/CONFIGURATION.md)
 - [Usage Guide](docs/USAGE.md)
+- [Architecture Overview](docs/ARCHITECTURE.md) - System architecture and query flow
+- [Architecture Diagrams](docs/ARCHITECTURE_DIAGRAMS.md) - Visual diagrams and flow charts
 - [Developer Guide](docs/DEVELOPER.md)
 - [Contributing](docs/CONTRIBUTING.md)
 

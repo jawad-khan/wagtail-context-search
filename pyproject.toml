@@ -45,7 +45,7 @@ pgvector = ["psycopg2-binary>=2.9.0"]
 qdrant = ["qdrant-client>=1.6.0"]
 
 [tool.setuptools]
-packages = ["wagtail_context_search"]
+packages = { find = {} }
 
 [tool.setuptools.package-data]
 wagtail_context_search = [

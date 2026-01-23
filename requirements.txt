@@ -14,6 +14,7 @@ Wagtail>=7.0,<8.0
 # chromadb>=0.4.0  # For ChromaDB backend
 # psycopg2-binary>=2.9.0  # For PostgreSQL/pgvector backend
 # qdrant-client>=1.6.0  # For Qdrant backend
+# meilisearch>=0.25.0  # For Meilisearch backend
 
 # Development dependencies
 # pytest>=7.0.0

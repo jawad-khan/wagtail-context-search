@@ -44,14 +44,43 @@ class RAGRetrieval:
         if top_k is None:
             top_k = self.top_k
 
-        # Generate query embedding
-        query_embedding = self.embedder.embed(query)
+        # For Meilisearch, we should use vector search (embeddings) for semantic similarity
+        # Text search in Meilisearch is for full-text search, not semantic similarity
+        # Only use text search if vector search is not available
+        use_vector_search = True
+        
+        # Check if this is Meilisearch - if so, use vector search instead of text search
+        if hasattr(self.vector_db, "search_text") and hasattr(self.vector_db, "__class__"):
+            # For Meilisearch, prefer vector search for semantic similarity
+            # Text search can be used as a fallback or hybrid approach
+            backend_name = self.vector_db.__class__.__name__.lower()
+            if "meilisearch" in backend_name:
+                use_vector_search = True  # Use vector search for Meilisearch
+            else:
+                # For other backends that support text search, use it
+                use_vector_search = False
+        
+        if use_vector_search:
+            # Generate query embedding
+            query_embedding = self.embedder.embed(query)
 
-        # Search vector database
-        documents = self.vector_db.search(
-            query_embedding=query_embedding,
-            top_k=top_k,
-        )
+            # Search vector database using embeddings
+            documents = self.vector_db.search(
+                query_embedding=query_embedding,
+                top_k=top_k,
+            )
+        elif hasattr(self.vector_db, "search_text"):
+            # Fallback to text search if vector search not available
+            documents = self.vector_db.search_text(query, top_k=top_k)
+        else:
+            # Generate query embedding
+            query_embedding = self.embedder.embed(query)
+
+            # Search vector database
+            documents = self.vector_db.search(
+                query_embedding=query_embedding,
+                top_k=top_k,
+            )
 
         return documents
 

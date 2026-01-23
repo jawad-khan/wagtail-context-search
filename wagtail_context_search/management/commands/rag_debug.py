@@ -13,11 +13,33 @@ class Command(BaseCommand):
     help = "Debug vector database and indexing status"
 
     def handle(self, *args, **options):
+        from django.conf import settings
+        
         config = get_config()
         
         self.stdout.write("=== Wagtail Context Search Debug Info ===\n")
         
-        # Check backends
+        # Configuration check
+        self.stdout.write("Configuration Status:")
+        user_config = getattr(settings, "WAGTAIL_CONTEXT_SEARCH", {})
+        self.stdout.write(f"  User config present: {'✓ Yes' if user_config else '✗ No (using defaults)'}")
+        self.stdout.write(f"  LLM Backend: {config.get('LLM_BACKEND')}")
+        self.stdout.write(f"  Embedder Backend: {config.get('EMBEDDER_BACKEND')}")
+        self.stdout.write(f"  Vector DB Backend: {config.get('VECTOR_DB_BACKEND')}")
+        
+        # Check API keys (masked)
+        backend_settings = config.get("BACKEND_SETTINGS", {})
+        self.stdout.write("\n  Backend Settings:")
+        for backend_name, backend_config in backend_settings.items():
+            if isinstance(backend_config, dict):
+                api_key = backend_config.get("api_key")
+                if api_key:
+                    masked = f"{api_key[:4]}...{api_key[-4:]}" if len(api_key) > 8 else "***"
+                    self.stdout.write(f"    {backend_name}.api_key: {masked} ✓")
+                else:
+                    self.stdout.write(self.style.WARNING(f"    {backend_name}.api_key: None ✗"))
+        
+        self.stdout.write("\nBackend Status:")
         self.stdout.write("Backend Status:")
         try:
             retrieval = RAGRetrieval(config)
@@ -71,7 +93,8 @@ class Command(BaseCommand):
             self.stdout.write(f"  Documents in vector DB: {vector_count}")
             
             # Try to directly query ChromaDB if available
-            if hasattr(retrieval.vector_db, '_get_client'):
+            if hasattr(retrieval.vector_db, '_get_client') and hasattr(retrieval.vector_db, 'persist_directory'):
+                # This is ChromaDB
                 try:
                     client = retrieval.vector_db._get_client()
                     collections = client.list_collections()
@@ -82,6 +105,37 @@ class Command(BaseCommand):
                             self.stdout.write(f"    Collection '{coll.name}': {count} documents")
                 except Exception as e:
                     self.stdout.write(f"  Could not list collections: {str(e)}")
+            elif hasattr(retrieval.vector_db, '_get_index'):
+                # This is Meilisearch
+                try:
+                    index = retrieval.vector_db._get_index()
+                    index_stats = index.get_stats()
+                    self.stdout.write(f"  Meilisearch index: {retrieval.vector_db.collection_name}")
+                    # Handle IndexStats object (not a dict)
+                    if hasattr(index_stats, 'number_of_documents'):
+                        doc_count = index_stats.number_of_documents
+                    elif hasattr(index_stats, 'numberOfDocuments'):
+                        doc_count = index_stats.numberOfDocuments
+                    elif isinstance(index_stats, dict):
+                        doc_count = index_stats.get('numberOfDocuments', index_stats.get('number_of_documents', 0))
+                    else:
+                        doc_count = 0
+                    self.stdout.write(f"    Documents: {doc_count}")
+                    
+                    # Check searchable attributes
+                    try:
+                        searchable_attrs = index.get_searchable_attributes()
+                        if searchable_attrs is None:
+                            self.stdout.write(f"    Searchable attributes: All fields (default)")
+                        elif isinstance(searchable_attrs, list) and len(searchable_attrs) == 0:
+                            self.stdout.write(self.style.WARNING(f"    ⚠ Searchable attributes: EMPTY (no fields searchable!)"))
+                            self.stdout.write(self.style.WARNING(f"    This is why searches return 0 results. Run: python manage.py rag_reindex_vector_db --all"))
+                        else:
+                            self.stdout.write(f"    Searchable attributes: {searchable_attrs}")
+                    except Exception as e:
+                        self.stdout.write(f"    Could not get searchable attributes: {str(e)}")
+                except Exception as e:
+                    self.stdout.write(f"  Could not get index stats: {str(e)}")
             
             # Try a test search
             if vector_count > 0:
